@@ -1,0 +1,40 @@
+# more channels
+---
+model:
+  type : VVAD
+  architecture : {
+    "encoder" : {
+      "enc1" : {"in_channels":1,"out_channels":64, "kernel_size":[3,3,3], "stride":[2,2,2], "padding":[0,0,0]},
+      "enc2" : {"in_channels":64,"out_channels":128, "kernel_size":[3,3,3], "stride":[2,2,2], "padding":[0,0,0]},
+      "enc3" : {"in_channels":128,"out_channels":256, "kernel_size":[3,3,1], "stride":[2,2,1], "padding":[0,0,0]},
+      "enc4" : {"in_channels":256,"out_channels":512, "kernel_size":[3,3,1], "stride":[2,2,1], "padding":[0,0,0]},
+      "enc5" : {"in_channels":512,"out_channels":512, "kernel_size":[3,3,1], "stride":[2,2,1], "padding":[1,1,0]},
+      "enc6" : {"in_channels":512,"out_channels":512, "kernel_size":[3,3,1], "stride":[1,1,1], "padding":[0,0,0]}
+    },
+    "TB" : {"n_feature":512,"drop_out":0.0},
+    "labeler": {"n_feature":512}
+  }
+---
+scheduler: # Plateau, oneCycle, CosineAnnealingLR
+  type: 'Plateau'
+  oneCycle:
+    max_lr: 0.0001
+  Plateau:
+    mode: 'min'
+    patience: 2
+    factor: 0.5
+    min_lr: 0.000005
+  CosineAnnealingLR : 
+    T_max : 20  # Maximum number of iterations.
+    eta_min : 0.000001
+---
+aug:
+  flip_p: 0.5
+  rotate_p : 0.5
+  rotate_angle : 30
+  gaussian_p : 0.1
+  sharpen_p : 0.1
+  contrast_p : 0.1
+  equalize_p : 0.1
+  blur_p : 0.1
+  perspective_p : 0.1

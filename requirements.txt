@@ -1,0 +1,8 @@
+opencv-python
+torch
+torchvision
+numpy
+tensorflow==2.12
+tensorrt
+deepface
+tf-keras
