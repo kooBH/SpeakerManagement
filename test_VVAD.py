@@ -9,8 +9,6 @@ import cv2
 from SpeakerManager.VVAD.VVAD import VVAD_helper
 from SpeakerManager.VVAD.hparams import HParam
 
-
-
 device = "cpu"
 hp_vvad = HParam(
   os.path.join(os.path.dirname(__file__),'SpeakerManager','VVAD','config','v7.yaml'),
@@ -19,8 +17,6 @@ hp_vvad = HParam(
 model = VVAD_helper(hp_vvad)
 model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__),'SpeakerManager','VVAD','chkpt','v7.pt'), map_location=device))
 model.eval()
-
-
 
 for idx_face in range(4) : 
     path_vid = f"/home/data/IITP/tmp/face_{idx_face}.avi"

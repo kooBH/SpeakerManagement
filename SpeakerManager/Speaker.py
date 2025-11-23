@@ -40,9 +40,14 @@ class Speaker :
             return False
 
     ### Face Related Functions ###
-    def insert_face(self,face):
+    def insert_face(self,face,pos):
+        if self.is_detected : 
+            print(f"[spk{self.id} duplicated face]")
+            return
         self.list_face.append(face)
+        self.list_pos.append(pos)
         self.face_continuity = True
+        self.is_detected = True
 
     def compare_face(self, embedding,threshold = 0.5):
         symilarity = cosine_similarity(self.face_embedding, embedding)
@@ -78,6 +83,7 @@ class Speaker :
 
         if not self.is_detected :
             self.list_face.append(None)
+            self.list_pos.append(None)
         
         self.is_detected = False
 

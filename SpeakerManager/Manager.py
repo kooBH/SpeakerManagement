@@ -30,6 +30,8 @@ class SpeakerManager:
     def insert_video(self,frames):
         n_frame = len(frames)
         ret = {}
+        
+        # Face Detection & Face Embedding
         for frame in frames :
             self.insert_image(frame)
 
@@ -37,11 +39,11 @@ class SpeakerManager:
                 spk.Tick(self.timestamp)
 
             self.timestamp += 1
+        
         ret['n_speaker'] = len(self.speakers)
         for idx in range(len(self.speakers)):
             ret[f'spk{idx}'] = {}
             ret[f'spk{idx}']['face_pos'] = self.speakers[idx].list_pos
-
 
         # VVAD
         for idx,spk in enumerate(self.speakers):
@@ -52,9 +54,6 @@ class SpeakerManager:
         for idx,spk in enumerate(self.speakers):
             spk.Release()
 
-
-
-
         """
         return informations about this video
         ret['n_speaker'] = len(self.speakers)
@@ -62,21 +61,42 @@ class SpeakerManager:
         ret['spk{i}']['vvad'] : VVAD prob / -1 for No face
 
         """
-        return 
+        return ret
 
     def insert_image(self,image):
         # image : H x W x C
         # Detect & Extract face embedding
         results = self.FR.extarct(image)
 
+        #print(len(results))
+
         # for each face
-        for result in results :
+        for i_result, result in enumerate(results) :
             embedding = np.array(result['embedding'])
             xs = result['facial_area']['x']
             ys = result['facial_area']['y']
             w = result['facial_area']['w']
             h = result['facial_area']['h']
-            postion = np.array([xs,ys,w,h])
+            position = np.array([xs,ys,w,h])
+
+            #print(position)
+
+
+            ## Check for duplicated detection
+            """
+            valid_detection = True
+
+            for j_result in range(i_result) :
+                prev_xs = results[j_result]['facial_area']['x']
+                prev_ys = results[j_result]['facial_area']['y']
+                dist = np.linalg.norm(np.array([xs,ys]) - np.array([prev_xs,prev_ys]))
+                if dist < 20 :
+                    valid_detection = False
+                    break
+            if not valid_detection :
+                continue
+            """
+
             known_speaker = False
 
             # face : (H,W,3) -> (96,96)
@@ -89,17 +109,18 @@ class SpeakerManager:
             # first speaker 
             if len(self.speakers) == 0 :
                 print(f"First Speaker {0}")
-                speaker = Speaker(speaker_id = 0, embedding = embedding, last_position = postion)
-                speaker.insert_face(face)
+                speaker = Speaker(speaker_id = 0, embedding = embedding, pos = position)
+                speaker.insert_face(face,position)
                 self.speakers.append(speaker)
                 known_speaker = True
+                continue
             # update
             else :
                 # tracking based on position
                 for idx, spk in enumerate(self.speakers):
-                    known_speaker = spk.tracking(postion)
+                    known_speaker = spk.tracking(position)
                     if known_speaker : 
-                        spk.insert_face(face)
+                        spk.insert_face(face,position)
                         break
                 
                 # face matching
@@ -112,20 +133,17 @@ class SpeakerManager:
                             spk.update_face_embedding(embedding, alpha = 0.1)
                             spk.insert_face(face)
                         except Exception as e:
+                            print(e)
                             import pdb; pdb.set_trace()
                         break
                         #print(f"Speaker ID : {spk.id} updated")
 
             # new speaker
             if not known_speaker :
-                speaker = Speaker(speaker_id = len(self.speakers), embedding = embedding, last_position = postion)
-                speaker.insert_face(face)
+                speaker = Speaker(speaker_id = len(self.speakers), embedding = embedding, pos = position)
+                speaker.insert_face(face,position)
                 self.speakers.append(speaker)
                 print(f"New Speaker ID : {len(self.speakers)-1}")
-
-            # Tick
-            for idx, spk in enumerate(self.speakers):
-                spk.Tick()
 
     def insert_utterance(self,video,audio = None):
         # video : []
@@ -150,10 +168,6 @@ class SpeakerManager:
         
 
         return
-
-    def insert_video(self, video):
-        for frame in video :
-            self.insert_image(frame)
 
     def resolve_VVAD(self,idx):
         return self.VVAD(self.speakers[idx].GetFaces())

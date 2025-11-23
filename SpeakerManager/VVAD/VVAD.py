@@ -122,9 +122,11 @@ class VVAD(nn.Module):
         return y,h
 
 class VVAD_helper(nn.Module) : 
-    def __init__(self,hp) : 
+    def __init__(self,hp,device="cpu") : 
         super(VVAD_helper,self).__init__()
         self.m = VVAD(hp)
+        self.device = device
+        self.min_t = 16
 
     def forward(self,x,timestep=38, h= None) : 
         # x : (B, T, 96,96) -> (B,1,96,96,T)
@@ -151,37 +153,39 @@ class VVAD_helper(nn.Module) :
                     cur_flag = False
 
                     # End of continuity
-                    if prev_flag == False :
-                        probs.append(0.0)
-                        continue
-                    if len(cur_face)  >= 4:
-                        faces = torch.stack(cur_face,dim=0).to(self.device)
-                        probs,h = self.forward(faces)
-                        for p in probs[0,:,0] :
+                    if prev_flag and len(cur_face)  >= self.min_t:
+                        faces = torch.stack(cur_face,dim=1).to(self.device)
+                        predict,h = self.forward(faces,timestep=len(cur_face))
+                        for p in predict[0,:] :
                             probs.append(p.item())
+                        cur_face = []
+                    else : 
+                        for x in cur_face :
+                            probs.append(-1.0)
+                        cur_face = []
 
+                    probs.append(-1.0)
                 else : 
                     cur_flag = True
                     cur_face.append(face)
-
-            # Force End
-
-
-
                 prev_flag = cur_flag
 
+            # TODO : update for continous block
+            # Force End
+            if len(cur_face) >= self.min_t :
+                faces = torch.stack(cur_face,dim=1).to(self.device)
+                predict,h = self.forward(faces,timestep=len(cur_face))
+                for p in predict[0,:] :
+                    probs.append(p.item())
+            else :
+                # +1 for last frame
+                for i in range(len(cur_face)):
+                    probs.append(-1.0)
 
-
-
-
-
-
-
+            if len(list_faces) != len(probs) :
+                import pdb
+                pdb.set_trace()
             return probs
-
-        
-
-
 
 if __name__ == "__main__" : 
     import SpeakerManager.VVAD.hparams as HParam
